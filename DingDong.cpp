@@ -4,253 +4,283 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 12-11-2020  14:56:42
+ * @Last modified time: 13-11-2020  10:27:55
  */
 #include "DingDong.h"
 
 
-void DingDong::routine()
+void DingDong::routine() //main fuction
 {
-  int difficulty = getDifficulty();
-  game(difficulty);
-  sleep();
+        int difficulty = getDifficulty();
+        game(difficulty);
+        sleep();
 }
 
 void DingDong::setup()
 {
-  red = 0;
-  yellow = 2;
-  green = 1;
-  button = 3;
-  pinMode(red, OUTPUT);
-  pinMode(yellow, OUTPUT);
-  pinMode(green, OUTPUT);
-  pinMode(button, INPUT);
+        /*
+           Setup only gets called if the Attiny somehow loses its power source.
+           It then sets the GPIOs as IN-/Outputs and reads the saved
+           Highscore from the EEPROM.
+           Note: This only has to be done once, even though it nearl powers
+           everything down in the SLEEP_MODE_PWR_DOWN mode. Attinys hold onto
+           their RAM when they are just slightly slightly powered.
+         */
+        red = 0;
+        green = 1;
+        yellow = 2;
+        button = 3;
+        pinMode(red, OUTPUT);
+        pinMode(yellow, OUTPUT);
+        pinMode(green, OUTPUT);
 
-  EEPROM.get(highscore_address, highscore);
+        pinMode(button, INPUT);
+
+        EEPROM.get(highscore_address, highscore);
 }
 
 void DingDong::wait_on_button_Release()
 {
-  delay(10);
-  while(digitalRead(button) == HIGH){}
+        delay(10);                        //Debounce time
+        while(digitalRead(button) == HIGH) {} //Empty while loop as long as the button is pressed
 }
 
 boolean DingDong::button_is_pressed()
 {
-  if(digitalRead(button) == HIGH)
-  {
-    return true;
-  }else{
-    return false;
-  }
+        //returns true if its pressed, false if it isnt. Nothing speial to see here.
+        if(digitalRead(button) == HIGH)
+        {
+                return true;
+        }else{
+                return false;
+        }
 }
 
 int DingDong::getDifficulty()
 {
-  delay(10);
-  wait_on_button_Release();
+        /*
+           Interrupt happens here, and the Attiny wakes up. Since The Pin
+           Change Interrupt Button is the main Button, we have to wait for
+           it to be released before we can start with this functions.
+         */
+        wait_on_button_Release();
 
-  int difficulty = 1;
-  uint32_t timestamp = millis();
-  set_green();
-  while(millis() - timestamp < 6000)
-  {
-    if(button_is_pressed())
-    {
-      timestamp = millis();
-      difficulty++;
-      if(difficulty > 4)
-      {
-        difficulty = 1;
-      }
-      leds_off();
-      switch (difficulty) {
-        case 1: set_green(); break;
-        case 2: set_yellow(); break;
-        case 3: set_red(); break;
-        case 4: set_green(); set_yellow(); set_red(); break;
-      }
-      wait_on_button_Release();
-    }
-  }
+        int difficulty = 1;                   // init difficulty
+        uint32_t timestamp = millis();        // set a timestamp for the wait 6s functionality
+        set_green();                          // set green in the beginning (difficulty 1)
+        while(millis() - timestamp < 6000)    // while loop for 6s, timestamo gets reset to millis() on every button press
+        {
+                if(button_is_pressed())
+                {
+                        timestamp = millis();
+                        difficulty++;
+                        if(difficulty > 4)    //"rolls over" at 5
+                        {
+                                difficulty = 1;
+                        }
+                        leds_off(); // reset leds, then look for difficulty
+                        switch (difficulty) {
+                        case 1: set_green(); break;
+                        case 2: set_yellow(); break;
+                        case 3: set_red(); break;
+                        case 4: set_green(); set_yellow(); set_red(); break;
+                        }
+                        wait_on_button_Release(); // wait as long as button is pressed
+                }
+        }
 
-  return difficulty;
+        return difficulty;
 }
 
 void DingDong::game(int difficulty)
 {
-  uint32_t general_timestamp = millis();
-  unsigned int score = 0;
+        uint32_t general_timestamp = millis();
+        unsigned int score = 0;
 
-  if(difficulty == 4)
-  {
-    show_highscore();
-    difficulty = 3;
-  }
-
-  set_onoff_times(difficulty);
-
-  randomSeed(millis());
-  while(millis() - general_timestamp < 45000) // main game loop
-  {
-    int led_id = get_random_led();
-
-    leds_off();
-
-    switch (led_id) {
-      case 1: set_green(); break;
-      case 2: set_yellow(); break;
-      case 3: set_red(); break;
-    }
-    uint32_t timestamp = millis();
-    while(millis() - timestamp < on_time)
-    {
-      if(button_is_pressed())
-      {
-        if(led_id == 2)       // got the yellow one !
+        if(difficulty == 4)
         {
-          score ++;
-          if(score < 10)
-          {
-            on_time -= 10;
-            off_time -= 3;
-          }
-          leds_off();
-          set_green();
-          wait_on_button_Release();
-          delay(1500);
+                show_highscore();
+                difficulty = 3;
         }
-        else{
-          leds_off();
-          set_red();
-          wait_on_button_Release();
-          delay(3000);
-          show_score(score, difficulty);
-          score = 0;
-          set_onoff_times(difficulty);
-        }
-        general_timestamp = millis();
-      }
-    }
-    leds_off();
-    timestamp = millis();
-    while(millis() - timestamp < off_time)
-    {
-      if(button_is_pressed())
-      {
-        leds_off();
-        set_red();
-        wait_on_button_Release();
-        delay(3000);
-        show_score(score, difficulty);
-        score = 0;
-        general_timestamp = millis();
+
         set_onoff_times(difficulty);
-      }
-    }
+
+        randomSeed(millis());
+        while(millis() - general_timestamp < 45000) // main game loop
+        {
+                int led_id = get_random_led();
+
+                leds_off();
+
+                switch (led_id) {
+                case 1: set_green(); break;
+                case 2: set_yellow(); break;
+                case 3: set_red(); break;
+                }
+                uint32_t timestamp = millis();
+                while(millis() - timestamp < on_time)
+                {
+                        if(button_is_pressed())
+                        {
+                                if(led_id == 2) // got the yellow one !
+                                {
+                                        score++;
+                                        if(score < 10)
+                                        {
+                                                on_time -= 10;
+                                                off_time -= 3;
+                                        }
+                                        leds_off();
+                                        set_green();
+                                        wait_on_button_Release();
+                                        delay(1500);
+                                }
+                                else{
+                                        leds_off();
+                                        set_red();
+                                        wait_on_button_Release();
+                                        delay(3000);
+                                        show_score(score, difficulty);
+                                        score = 0;
+                                        set_onoff_times(difficulty);
+                                }
+                                general_timestamp = millis();
+                        }
+                }
+                leds_off();
+                timestamp = millis();
+                while(millis() - timestamp < off_time)
+                {
+                        if(button_is_pressed())
+                        {
+                                leds_off();
+                                set_red();
+                                wait_on_button_Release();
+                                delay(3000);
+                                show_score(score, difficulty);
+                                score = 0;
+                                general_timestamp = millis();
+                                set_onoff_times(difficulty);
+                        }
+                }
 
 
-  }
+        }
 }
 
 void DingDong::set_onoff_times(unsigned int difficulty)
 {
-  switch (difficulty) {
-    case 1: on_time = 550; off_time = 166; break;
-    case 2: on_time = 450; off_time = 133; break;
-    case 3: on_time = 350; off_time = 100; break;
-    default: on_time = 350; off_time = 100; difficulty = 3; break;
-  }
+        /*
+          Sets on_time and off_time in the beginning of a game.
+          This is necessary since the times get changed during the game.
+        */
+        switch (difficulty) {
+        case 1: on_time = 550; off_time = 166; break;
+        case 2: on_time = 450; off_time = 133; break;
+        case 3: on_time = 350; off_time = 100; break;
+        default: on_time = 350; off_time = 100; difficulty = 3; break;
+        }
 }
 
 void DingDong::show_score(unsigned int score, unsigned int difficulty)
 {
-  if(difficulty == 3)
-  {
-    if(score > highscore)
-    {
-      EEPROM.put(highscore_address, score);
-      highscore = score;
-    }
-  }
-  for(unsigned int i = 0; i < score; i ++)
-  {
-    set_green();
-    set_yellow();
-    set_red();
-    delay(400);
-    leds_off();
-    delay(300);
-  }
-  delay(1500);
+        if(difficulty == 3) // if difficulty is 'hard' -> check for Highscore.
+        {
+                if(score > highscore)
+                {
+                        //save highscore to EEPROM
+                        EEPROM.put(highscore_address, score);
+                        highscore = score;
+                }
+        }
+        for(unsigned int i = 0; i < score; i++) // blink all leds score-times
+        {
+                set_green();
+                set_yellow();
+                set_red();
+                delay(400);
+                leds_off();
+                delay(300);
+        }
+        delay(1500);
 }
 
 void DingDong::show_highscore()
 {
-  leds_off();
-  delay(400);
-  show_score(highscore, 0);
+        // i don't think comments are necessary here.
+        leds_off();
+        delay(400);
+        show_score(highscore, 0); // 0 just to fufill the requirements of the function show_score
 }
 
-int DingDong::get_random_led()
+int DingDong::get_random_led() // returns 1, 2 or 3 as led_id
 {
-  int rnd = random(1,200);
-  if(rnd <= 85)
-  {
-    return 1;
-  }
-  else if (rnd > 85 && rnd < 115)
-  {
-    return 2;
-  }
-  else
-  {
-    return 3;
-  }
+        int rnd = random(1,200);
+        if(rnd <= 85)
+        {
+                return 1;
+        }
+        else if (rnd > 85 && rnd < 115)
+        {
+                return 2;
+        }
+        else
+        {
+                return 3;
+        }
 }
 
-void DingDong::leds_off()
+void DingDong::leds_off() // all LEDs off
 {
-  digitalWrite(red, LOW);
-  digitalWrite(yellow, LOW);
-  digitalWrite(green, LOW);
+        digitalWrite(red, LOW);
+        digitalWrite(yellow, LOW);
+        digitalWrite(green, LOW);
 }
 
-void DingDong::set_green()
+void DingDong::set_green() // green on
 {
-  digitalWrite(green, HIGH);
+        digitalWrite(green, HIGH);
 }
 
-void DingDong::set_yellow()
+void DingDong::set_yellow() // yellow on
 {
-  digitalWrite(yellow, HIGH);
+        digitalWrite(yellow, HIGH);
 }
 
-void DingDong::set_red()
+void DingDong::set_red()    // red on
 {
-  digitalWrite(red, HIGH);
+        digitalWrite(red, HIGH);
 }
 
-void DingDong::sleep()
+void DingDong::resetEEPROM()
+{
+        /*
+          This step is obligatory ONCE. This sets the Highscore to 0
+          as i had problems with my highscore being some random number in the
+          EEPROM. I want every DingDong to have the Highscore 0 in the beginning.
+        */
+        EEPROM.put(highscore_address, 0);
+}
+
+void DingDong::sleep()       // when sleeping, i measured a current of 100nA. This is pretty decent. 
 {
 
-    leds_off();
-    GIMSK |= _BV(PCIE);                     // Enable Pin Change Interrupts
-    PCMSK |= _BV(PCINT3);                   // Use PB0 (was PB3) as interrupt pin
-    // Turn off unnecessary peripherals
-    ADCSRA &= ~_BV(ADEN);                   // ADC off
-    ACSR |= _BV(ACD); // Disable analog comparator
+        leds_off();                         // all LEDs offs
+        GIMSK |= _BV(PCIE);                 // Enable Pin Change Interrupts
+        PCMSK |= _BV(PCINT3);               // Use PB0 (was PB3) as interrupt pin
+        // Turn off unnecessary peripherals
+        ADCSRA &= ~_BV(ADEN);               // ADC off
+        ACSR |= _BV(ACD); // Disable analog comparator
 
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);    // replaces above statement
-    sleep_enable();                         // Sets the Sleep Enable bit in the MCUCR Register (SE BIT)
-    sei();                                  // Enable interrupts
-    sleep_cpu();                            // sleep ... Zzzz
+        set_sleep_mode(SLEEP_MODE_PWR_DOWN); // replaces above statement
+        sleep_enable();                     // Sets the Sleep Enable bit in the MCUCR Register (SE BIT)
+        sei();                              // Enable interrupts
+        sleep_cpu();                        // sleep ... Zzzz
 
-    cli();                                  // Disable interrupts
-    PCMSK &= ~_BV(PCINT3);                  // Turn off PB0 (was PB3) as interrupt pin
-    sleep_disable();                        // Clear SE bit
-    ADCSRA |= _BV(ADEN);
-    sei();                                  // Enable interrupts
+        cli();                              // Disable interrupts
+        PCMSK &= ~_BV(PCINT3);              // Turn off PB0 (was PB3) as interrupt pin
+        sleep_disable();                    // Clear SE bit
+        ADCSRA |= _BV(ADEN);
+        sei();                              // Enable interrupts
 
 }
