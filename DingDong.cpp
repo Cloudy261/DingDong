@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 13-11-2020  10:27:55
+ * @Last modified time: 13-11-2020  10:40:13
  */
 #include "DingDong.h"
 
@@ -94,31 +94,31 @@ int DingDong::getDifficulty()
 
 void DingDong::game(int difficulty)
 {
-        uint32_t general_timestamp = millis();
+        uint32_t general_timestamp = millis(); // get the timestamp for the 45s general routine
         unsigned int score = 0;
 
-        if(difficulty == 4)
+        if(difficulty == 4)  // difficulty 4 = show the Highscore and set difficulty to 3
         {
                 show_highscore();
                 difficulty = 3;
         }
 
-        set_onoff_times(difficulty);
+        set_onoff_times(difficulty); // set the on/off times
 
-        randomSeed(millis());
+        randomSeed(millis());        // random Seed just to add a unique random experience
         while(millis() - general_timestamp < 45000) // main game loop
         {
-                int led_id = get_random_led();
+                int led_id = get_random_led(); // get led_id to determine which LED should be on
 
                 leds_off();
-
+                //all leds off and turn on the matching LED
                 switch (led_id) {
                 case 1: set_green(); break;
                 case 2: set_yellow(); break;
                 case 3: set_red(); break;
                 }
-                uint32_t timestamp = millis();
-                while(millis() - timestamp < on_time)
+                uint32_t timestamp = millis();            // 'On/Off TIme timestamp'
+                while(millis() - timestamp < on_time)     // chek for buttonpress as long as the On/Off time
                 {
                         if(button_is_pressed())
                         {
@@ -127,6 +127,7 @@ void DingDong::game(int difficulty)
                                         score++;
                                         if(score < 10)
                                         {
+                                                //Times get shorter / Game becomes faster
                                                 on_time -= 10;
                                                 off_time -= 3;
                                         }
@@ -135,7 +136,7 @@ void DingDong::game(int difficulty)
                                         wait_on_button_Release();
                                         delay(1500);
                                 }
-                                else{
+                                else{               // pressed at wrong led
                                         leds_off();
                                         set_red();
                                         wait_on_button_Release();
@@ -144,7 +145,7 @@ void DingDong::game(int difficulty)
                                         score = 0;
                                         set_onoff_times(difficulty);
                                 }
-                                general_timestamp = millis();
+                                general_timestamp = millis();   // renew general_timestamp
                         }
                 }
                 leds_off();
@@ -262,7 +263,7 @@ void DingDong::resetEEPROM()
         EEPROM.put(highscore_address, 0);
 }
 
-void DingDong::sleep()       // when sleeping, i measured a current of 100nA. This is pretty decent. 
+void DingDong::sleep()       // when sleeping, i measured a current of 100nA. This is pretty decent.
 {
 
         leds_off();                         // all LEDs offs
