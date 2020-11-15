@@ -4,15 +4,18 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 13-11-2020  10:40:13
+ * @Last modified time: 15-11-2020  21:20:05
  */
 #include "DingDong.h"
 
 
 void DingDong::routine() //main fuction
 {
+        keep_running = true;
+        show_on_screen();
         int difficulty = getDifficulty();
         game(difficulty);
+        show_off_screen();
         sleep();
 }
 
@@ -39,10 +42,22 @@ void DingDong::setup()
         EEPROM.get(highscore_address, highscore);
 }
 
-void DingDong::wait_on_button_Release()
+boolean DingDong::wait_on_button_Release()
 {
         delay(10);                        //Debounce time
-        while(digitalRead(button) == HIGH) {} //Empty while loop as long as the button is pressed
+        uint32_t timestamp = millis();
+        boolean running = true;
+        while(digitalRead(button) == HIGH)
+        {
+                if(millis() - timestamp > BUTTON_TURN_OFF_TIME)
+                {
+                        running = false;
+                        break;
+                }
+        }
+        delay(10);
+        return running;
+
 }
 
 boolean DingDong::button_is_pressed()
@@ -64,15 +79,13 @@ int DingDong::getDifficulty()
            it to be released before we can start with this functions.
          */
         wait_on_button_Release();
-
         int difficulty = 1;                   // init difficulty
         uint32_t timestamp = millis();        // set a timestamp for the wait 6s functionality
         set_green();                          // set green in the beginning (difficulty 1)
-        while(millis() - timestamp < 6000)    // while loop for 6s, timestamo gets reset to millis() on every button press
+        while(keep_running && millis() - timestamp < 6000)    // while loop for 6s, timestamp gets reset to millis() on every button press
         {
                 if(button_is_pressed())
                 {
-                        timestamp = millis();
                         difficulty++;
                         if(difficulty > 4)    //"rolls over" at 5
                         {
@@ -85,7 +98,8 @@ int DingDong::getDifficulty()
                         case 3: set_red(); break;
                         case 4: set_green(); set_yellow(); set_red(); break;
                         }
-                        wait_on_button_Release(); // wait as long as button is pressed
+                        keep_running = wait_on_button_Release(); // wait as long as button is pressed
+                        timestamp = millis();
                 }
         }
 
@@ -94,90 +108,116 @@ int DingDong::getDifficulty()
 
 void DingDong::game(int difficulty)
 {
-        uint32_t general_timestamp = millis(); // get the timestamp for the 45s general routine
-        unsigned int score = 0;
-
-        if(difficulty == 4)  // difficulty 4 = show the Highscore and set difficulty to 3
+        if(keep_running)
         {
-                show_highscore();
-                difficulty = 3;
-        }
+                uint32_t general_timestamp = millis(); // get the timestamp for the 45s general routine
+                unsigned int score = 0;
 
-        set_onoff_times(difficulty); // set the on/off times
-
-        randomSeed(millis());        // random Seed just to add a unique random experience
-        while(millis() - general_timestamp < 45000) // main game loop
-        {
-                int led_id = get_random_led(); // get led_id to determine which LED should be on
-
-                leds_off();
-                //all leds off and turn on the matching LED
-                switch (led_id) {
-                case 1: set_green(); break;
-                case 2: set_yellow(); break;
-                case 3: set_red(); break;
-                }
-                uint32_t timestamp = millis();            // 'On/Off TIme timestamp'
-                while(millis() - timestamp < on_time)     // chek for buttonpress as long as the On/Off time
+                if(difficulty == 4) // difficulty 4 = show the Highscore and set difficulty to 3
                 {
-                        if(button_is_pressed())
+                        show_highscore();
+                        difficulty = 3;
+                }
+
+                set_onoff_times(difficulty); // set the on/off times
+
+                randomSeed(millis()); // random Seed just to add a unique random experience
+                while(keep_running && millis() - general_timestamp < 45000) // main game loop
+                {
+                        int led_id = get_random_led(); // get led_id to determine which LED should be on
+
+                        leds_off();
+                        //all leds off and turn on the matching LED
+                        switch (led_id) {
+                        case 1: set_green(); break;
+                        case 2: set_yellow(); break;
+                        case 3: set_red(); break;
+                        }
+                        uint32_t timestamp = millis();    // 'On/Off TIme timestamp'
+                        while(millis() - timestamp < on_time) // chek for buttonpress as long as the On/Off time
                         {
-                                if(led_id == 2) // got the yellow one !
+                                if(button_is_pressed())
                                 {
-                                        score++;
-                                        if(score < 10)
+                                        if(led_id == 2) // got the yellow one !
                                         {
-                                                //Times get shorter / Game becomes faster
-                                                on_time -= 10;
-                                                off_time -= 3;
+                                                score++;
+                                                if(score < 10)
+                                                {
+                                                        //Times get shorter / Game becomes faster
+                                                        on_time -= 10;
+                                                        off_time -= 3;
+                                                }
+                                                leds_off();
+                                                set_green();
+                                                keep_running = wait_on_button_Release();
+                                                if(keep_running)
+                                                {
+                                                        delay(2000);
+                                                }
+                                                else
+                                                {
+                                                        break;
+                                                }
                                         }
-                                        leds_off();
-                                        set_green();
-                                        wait_on_button_Release();
-                                        delay(1500);
+                                        else{       // pressed at wrong led
+                                                leds_off();
+                                                set_red();
+                                                keep_running = wait_on_button_Release();
+                                                if(keep_running)
+                                                {
+                                                        delay(3000);
+                                                        show_score(score, difficulty);
+                                                        score = 0;
+                                                        set_onoff_times(difficulty);
+                                                }
+                                                else
+                                                {
+                                                        break;
+                                                }
+                                        }
+                                        general_timestamp = millis(); // renew general_timestamp
                                 }
-                                else{               // pressed at wrong led
-                                        leds_off();
-                                        set_red();
-                                        wait_on_button_Release();
-                                        delay(3000);
-                                        show_score(score, difficulty);
-                                        score = 0;
-                                        set_onoff_times(difficulty);
-                                }
-                                general_timestamp = millis();   // renew general_timestamp
                         }
-                }
-                leds_off();
-                timestamp = millis();
-                while(millis() - timestamp < off_time)
-                {
-                        if(button_is_pressed())
+                        leds_off();
+                        timestamp = millis();
+                        if(keep_running)
                         {
-                                leds_off();
-                                set_red();
-                                wait_on_button_Release();
-                                delay(3000);
-                                show_score(score, difficulty);
-                                score = 0;
-                                general_timestamp = millis();
-                                set_onoff_times(difficulty);
+                                while(millis() - timestamp < off_time)
+                                {
+                                        if(button_is_pressed())
+                                        {
+                                                leds_off();
+                                                set_red();
+                                                keep_running = wait_on_button_Release();
+                                                if(keep_running)
+                                                {
+                                                        delay(3000);
+                                                        show_score(score, difficulty);
+                                                        score = 0;
+                                                        general_timestamp = millis();
+                                                        set_onoff_times(difficulty);
+                                                }
+                                                else
+                                                {
+                                                        break;
+                                                }
+                                        }
+                                }
                         }
+
                 }
-
-
         }
 }
 
 void DingDong::set_onoff_times(unsigned int difficulty)
 {
         /*
-          Sets on_time and off_time in the beginning of a game.
-          This is necessary since the times get changed during the game.
-        */
+           Sets on_time and off_time in the beginning of a game.
+           This is necessary since the times get changed during the game.
+         */
         switch (difficulty) {
-        case 1: on_time = 550; off_time = 166; break;
-        case 2: on_time = 450; off_time = 133; break;
+        case 1: on_time = 500; off_time = 166; break;
+        case 2: on_time = 400; off_time = 133; break;
         case 3: on_time = 350; off_time = 100; break;
         default: on_time = 350; off_time = 100; difficulty = 3; break;
         }
@@ -194,16 +234,31 @@ void DingDong::show_score(unsigned int score, unsigned int difficulty)
                         highscore = score;
                 }
         }
+        int button_is_pressed_counter = 0;
+        int score_on_delay = 350;
+        int score_off_delay = 300;
         for(unsigned int i = 0; i < score; i++) // blink all leds score-times
         {
                 set_green();
                 set_yellow();
                 set_red();
-                delay(400);
+                delay(score_on_delay);
                 leds_off();
-                delay(300);
+                delay(score_off_delay);
+                if(button_is_pressed())
+                {
+                        button_is_pressed_counter++;
+                        if(button_is_pressed_counter * (score_on_delay + score_off_delay) > BUTTON_TURN_OFF_TIME)
+                        {
+                                keep_running = false;
+                                break;
+                        }
+                }
         }
-        delay(1500);
+        if(keep_running)
+        {
+                delay(1500);
+        }
 }
 
 void DingDong::show_highscore()
@@ -256,11 +311,33 @@ void DingDong::set_red()    // red on
 void DingDong::resetEEPROM()
 {
         /*
-          This step is obligatory ONCE. This sets the Highscore to 0
-          as i had problems with my highscore being some random number in the
-          EEPROM. I want every DingDong to have the Highscore 0 in the beginning.
-        */
+           This step is obligatory ONCE. This sets the Highscore to 0
+           as i had problems with my highscore being some random number in the
+           EEPROM. I want every DingDong to have the Highscore 0 in the beginning.
+         */
         EEPROM.put(highscore_address, 0);
+}
+
+void DingDong::show_on_screen()
+{
+        for(int i = 0; i < 255; i++)
+        {
+                analogWrite(green, i);
+                delay(1);
+        }
+}
+
+void DingDong::show_off_screen()
+{
+        leds_off();
+        set_red();
+        for(int i = 255; i > 0; i--)
+        {
+                analogWrite(red, i);
+                delay(5);
+        }
+        leds_off();
+        wait_on_button_Release();
 }
 
 void DingDong::sleep()       // when sleeping, i measured a current of 100nA. This is pretty decent.

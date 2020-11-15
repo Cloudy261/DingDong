@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.h
  * @Last modified by:   claudi
- * @Last modified time: 13-11-2020  10:09:04
+ * @Last modified time: 15-11-2020  21:19:46
  */
 
 #include "Arduino.h"
@@ -13,6 +13,8 @@
 #include <avr/power.h>
 #include <inttypes.h>
 #include <EEPROM.h>
+
+#define BUTTON_TURN_OFF_TIME 4000 //ms
 
 
 class DingDong
@@ -26,8 +28,10 @@ unsigned int highscore{0};
 
 uint32_t on_time, off_time;
 
+boolean keep_running{true};
+
 void leds_off();
-void wait_on_button_Release();
+boolean wait_on_button_Release();
 void set_red();
 void set_yellow();
 void set_green();
@@ -39,6 +43,10 @@ void sleep();
 int get_random_led();
 void show_score(unsigned int score, unsigned int difficulty);
 void set_onoff_times(unsigned int diff);
+
+void show_on_screen();
+void show_off_screen();
+
 
 public:
 
