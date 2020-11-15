@@ -4,10 +4,9 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 15-11-2020  21:20:05
+ * @Last modified time: 15-11-2020  22:41:29
  */
 #include "DingDong.h"
-
 
 void DingDong::routine() //main fuction
 {
@@ -316,6 +315,18 @@ void DingDong::resetEEPROM()
            EEPROM. I want every DingDong to have the Highscore 0 in the beginning.
          */
         EEPROM.put(highscore_address, 0);
+
+        while(1)
+        {
+                set_red();
+                delay(100);
+                leds_off();
+                delay(100);
+                set_red();
+                delay(100);
+                leds_off();
+                delay(1000);
+        }
 }
 
 void DingDong::show_on_screen()
