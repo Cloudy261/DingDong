@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 15-11-2020  22:41:29
+ * @Last modified time: 17-11-2020  15:33:57
  */
 #include "DingDong.h"
 
@@ -39,6 +39,13 @@ void DingDong::setup()
         pinMode(button, INPUT);
 
         EEPROM.get(highscore_address, highscore);
+
+        EEPROM.get(reaction.reaction_address, reaction.time);
+
+        EEPROM.get(reaction.counter_address, reaction.counter);
+
+
+
 }
 
 boolean DingDong::wait_on_button_Release()
@@ -81,7 +88,7 @@ int DingDong::getDifficulty()
         int difficulty = 1;                   // init difficulty
         uint32_t timestamp = millis();        // set a timestamp for the wait 6s functionality
         set_green();                          // set green in the beginning (difficulty 1)
-        while(keep_running && millis() - timestamp < 6000)    // while loop for 6s, timestamp gets reset to millis() on every button press
+        while(keep_running && millis() - timestamp < 4000)    // while loop for 6s, timestamp gets reset to millis() on every button press
         {
                 if(button_is_pressed())
                 {
@@ -121,6 +128,7 @@ void DingDong::game(int difficulty)
                 set_onoff_times(difficulty); // set the on/off times
 
                 randomSeed(millis()); // random Seed just to add a unique random experience
+                uint32_t reactiontime = 0;
                 while(keep_running && millis() - general_timestamp < 45000) // main game loop
                 {
                         int led_id = get_random_led(); // get led_id to determine which LED should be on
@@ -140,6 +148,10 @@ void DingDong::game(int difficulty)
                                         if(led_id == 2) // got the yellow one !
                                         {
                                                 score++;
+                                                if(difficulty == 3)
+                                                {
+                                                        reactiontime += (millis() - timestamp);
+                                                }
                                                 if(score < 10)
                                                 {
                                                         //Times get shorter / Game becomes faster
@@ -165,8 +177,10 @@ void DingDong::game(int difficulty)
                                                 if(keep_running)
                                                 {
                                                         delay(3000);
+                                                        update_average_reaction_time(reactiontime, score);
                                                         show_score(score, difficulty);
                                                         score = 0;
+                                                        reactiontime = 0;
                                                         set_onoff_times(difficulty);
                                                 }
                                                 else
@@ -191,8 +205,10 @@ void DingDong::game(int difficulty)
                                                 if(keep_running)
                                                 {
                                                         delay(3000);
+                                                        update_average_reaction_time(reactiontime, score);
                                                         show_score(score, difficulty);
                                                         score = 0;
+                                                        reactiontime = 0;
                                                         general_timestamp = millis();
                                                         set_onoff_times(difficulty);
                                                 }
@@ -271,11 +287,11 @@ void DingDong::show_highscore()
 int DingDong::get_random_led() // returns 1, 2 or 3 as led_id
 {
         int rnd = random(1,200);
-        if(rnd <= 85)
+        if(rnd <= 80)
         {
                 return 1;
         }
-        else if (rnd > 85 && rnd < 115)
+        else if (rnd > 80 && rnd < 120)
         {
                 return 2;
         }
@@ -316,6 +332,10 @@ void DingDong::resetEEPROM()
          */
         EEPROM.put(highscore_address, 0);
 
+        EEPROM.put(reaction.reaction_address, 200.0f);
+        uint32_t tmp = 1;
+        EEPROM.put(reaction.counter_address, tmp);
+        show_average_reaction_time();
         while(1)
         {
                 set_red();
@@ -342,18 +362,76 @@ void DingDong::show_off_screen()
 {
         leds_off();
         set_red();
+        int easteregg_counter = 0;
+        int state = digitalRead(button);
+        int old_state = state;
         for(int i = 255; i > 0; i--)
         {
+                state = digitalRead(button);
+                if(state != old_state)
+                {
+                        easteregg_counter++;
+                }
+                old_state = state;
                 analogWrite(red, i);
                 delay(5);
         }
         leds_off();
+        if(easteregg_counter == 7)
+        {
+                show_average_reaction_time();
+        }
         wait_on_button_Release();
+}
+
+void DingDong::update_average_reaction_time(uint32_t time, unsigned int score)
+{
+        float new_time = (reaction.time * reaction.counter + time)/(reaction.counter + score);
+        reaction.time = new_time;
+        reaction.counter += score;
+        EEPROM.put(reaction.reaction_address, reaction.time);
+        EEPROM.put(reaction.counter_address, reaction.counter);
+}
+
+void DingDong::show_average_reaction_time()
+{
+        int time = (int) reaction.time;
+        int hundreds = (time - (time % 100));
+        int tens = (time - ((time % 10) + hundreds));
+        int ones = time % 10;
+        hundreds /= 100;
+        tens /= 10;
+        leds_off();
+        delay(250);
+        for(int i = 0; i < hundreds; i++)
+        {
+                set_green();
+                delay(300);
+                leds_off();
+                delay(250);
+        }
+        delay(1000);
+        for(int i = 0; i < tens; i++)
+        {
+                set_yellow();
+                delay(300);
+                leds_off();
+                delay(250);
+        }
+        delay(1000);
+        for(int i = 0; i < ones; i++)
+        {
+                set_red();
+                delay(300);
+                leds_off();
+                delay(250);
+        }
+        delay(1000);
+
 }
 
 void DingDong::sleep()       // when sleeping, i measured a current of 100nA. This is pretty decent.
 {
-
         leds_off();                         // all LEDs offs
         GIMSK |= _BV(PCIE);                 // Enable Pin Change Interrupts
         PCMSK |= _BV(PCINT3);               // Use PB0 (was PB3) as interrupt pin
