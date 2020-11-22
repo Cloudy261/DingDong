@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 17-11-2020  15:33:57
+ * @Last modified time: 22-11-2020  23:12:18
  */
 #include "DingDong.h"
 
@@ -38,13 +38,7 @@ void DingDong::setup()
 
         pinMode(button, INPUT);
 
-        EEPROM.get(highscore_address, highscore);
-
-        EEPROM.get(reaction.reaction_address, reaction.time);
-
-        EEPROM.get(reaction.counter_address, reaction.counter);
-
-
+        EEPROM.get(stats_address, stats);
 
 }
 
@@ -117,7 +111,7 @@ void DingDong::game(int difficulty)
         if(keep_running)
         {
                 uint32_t general_timestamp = millis(); // get the timestamp for the 45s general routine
-                unsigned int score = 0;
+                uint32_t score = 0;
 
                 if(difficulty == 4) // difficulty 4 = show the Highscore and set difficulty to 3
                 {
@@ -163,7 +157,7 @@ void DingDong::game(int difficulty)
                                                 keep_running = wait_on_button_Release();
                                                 if(keep_running)
                                                 {
-                                                        delay(2000);
+                                                        keep_running = clean_delay(2000);
                                                 }
                                                 else
                                                 {
@@ -176,7 +170,7 @@ void DingDong::game(int difficulty)
                                                 keep_running = wait_on_button_Release();
                                                 if(keep_running)
                                                 {
-                                                        delay(3000);
+                                                        keep_running = clean_delay(3000);
                                                         update_average_reaction_time(reactiontime, score);
                                                         show_score(score, difficulty);
                                                         score = 0;
@@ -204,7 +198,7 @@ void DingDong::game(int difficulty)
                                                 keep_running = wait_on_button_Release();
                                                 if(keep_running)
                                                 {
-                                                        delay(3000);
+                                                        keep_running = clean_delay(3000);
                                                         update_average_reaction_time(reactiontime, score);
                                                         show_score(score, difficulty);
                                                         score = 0;
@@ -242,11 +236,11 @@ void DingDong::show_score(unsigned int score, unsigned int difficulty)
 {
         if(difficulty == 3) // if difficulty is 'hard' -> check for Highscore.
         {
-                if(score > highscore)
+                if(score > stats.highscore)
                 {
                         //save highscore to EEPROM
-                        EEPROM.put(highscore_address, score);
-                        highscore = score;
+                        stats.highscore = score;
+                        EEPROM.put(stats_address, stats);
                 }
         }
         int button_is_pressed_counter = 0;
@@ -272,7 +266,7 @@ void DingDong::show_score(unsigned int score, unsigned int difficulty)
         }
         if(keep_running)
         {
-                delay(1500);
+                keep_running = clean_delay(1500);
         }
 }
 
@@ -281,7 +275,7 @@ void DingDong::show_highscore()
         // i don't think comments are necessary here.
         leds_off();
         delay(400);
-        show_score(highscore, 0); // 0 just to fufill the requirements of the function show_score
+        show_score(stats.highscore, 0); // 0 just to fufill the requirements of the function show_score
 }
 
 int DingDong::get_random_led() // returns 1, 2 or 3 as led_id
@@ -330,11 +324,13 @@ void DingDong::resetEEPROM()
            as i had problems with my highscore being some random number in the
            EEPROM. I want every DingDong to have the Highscore 0 in the beginning.
          */
-        EEPROM.put(highscore_address, 0);
+        stats_struct tmp_stats;
+        tmp_stats.counter = 1;
+        tmp_stats.average_reaction_time = 200.0f;
+        tmp_stats.highscore = 0;
+        EEPROM.put(stats_address, tmp_stats);
 
-        EEPROM.put(reaction.reaction_address, 200.0f);
-        uint32_t tmp = 1;
-        EEPROM.put(reaction.counter_address, tmp);
+
         show_average_reaction_time();
         while(1)
         {
@@ -351,11 +347,17 @@ void DingDong::resetEEPROM()
 
 void DingDong::show_on_screen()
 {
+
         for(int i = 0; i < 255; i++)
         {
                 analogWrite(green, i);
                 delay(1);
         }
+
+        set_green();
+
+
+
 }
 
 void DingDong::show_off_screen()
@@ -384,26 +386,25 @@ void DingDong::show_off_screen()
         wait_on_button_Release();
 }
 
-void DingDong::update_average_reaction_time(uint32_t time, unsigned int score)
+void DingDong::update_average_reaction_time(uint32_t time, uint32_t score)
 {
-        float new_time = (reaction.time * reaction.counter + time)/(reaction.counter + score);
-        reaction.time = new_time;
-        reaction.counter += score;
-        EEPROM.put(reaction.reaction_address, reaction.time);
-        EEPROM.put(reaction.counter_address, reaction.counter);
+        float new_time = ((float)(stats.average_reaction_time * stats.counter) + (float)time)/(stats.counter + score);
+        stats.average_reaction_time = new_time;
+        stats.counter += score;
+        EEPROM.put(stats_address, stats);
 }
 
 void DingDong::show_average_reaction_time()
 {
-        int time = (int) reaction.time;
-        int hundreds = (time - (time % 100));
-        int tens = (time - ((time % 10) + hundreds));
-        int ones = time % 10;
+        uint32_t time = (uint32_t)stats.average_reaction_time;
+        uint32_t hundreds = (time - (time % 100));
+        uint32_t tens = (time - ((time % 10) + hundreds));
+        uint32_t ones = time % 10;
         hundreds /= 100;
         tens /= 10;
         leds_off();
         delay(250);
-        for(int i = 0; i < hundreds; i++)
+        for(uint32_t i = 0; i < hundreds; i++)
         {
                 set_green();
                 delay(300);
@@ -411,7 +412,7 @@ void DingDong::show_average_reaction_time()
                 delay(250);
         }
         delay(1000);
-        for(int i = 0; i < tens; i++)
+        for(uint32_t i = 0; i < tens; i++)
         {
                 set_yellow();
                 delay(300);
@@ -419,7 +420,7 @@ void DingDong::show_average_reaction_time()
                 delay(250);
         }
         delay(1000);
-        for(int i = 0; i < ones; i++)
+        for(uint32_t i = 0; i < ones; i++)
         {
                 set_red();
                 delay(300);
@@ -428,6 +429,25 @@ void DingDong::show_average_reaction_time()
         }
         delay(1000);
 
+}
+
+boolean DingDong::clean_delay(uint32_t ms)
+{
+        uint32_t timestamp = millis();
+        boolean keep_alive = true;
+        while(millis() - timestamp < ms)
+        {
+                if(button_is_pressed())
+                {
+                        keep_alive = wait_on_button_Release();
+                        if(!keep_alive)
+                        {
+                                break;
+                        }
+                }
+                delay(1);
+        }
+        return keep_alive;
 }
 
 void DingDong::sleep()       // when sleeping, i measured a current of 100nA. This is pretty decent.

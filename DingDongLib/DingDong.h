@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.h
  * @Last modified by:   claudi
- * @Last modified time: 17-11-2020  13:35:34
+ * @Last modified time: 22-11-2020  23:06:30
  */
 
 #include "Arduino.h"
@@ -14,13 +14,12 @@
 #include <inttypes.h>
 #include <EEPROM.h>
 
-#define BUTTON_TURN_OFF_TIME 4000 //ms
+#define BUTTON_TURN_OFF_TIME 3000 //ms
 
-struct reaction_time {
-        float time;
+struct stats_struct {
+        float average_reaction_time;
         uint32_t counter;
-        uint32_t reaction_address{200};
-        uint32_t counter_address{300};
+        unsigned int highscore;
 };
 
 class DingDong
@@ -29,12 +28,8 @@ private:
 
 int red, green, yellow, button;
 
-int highscore_address{100};
-unsigned int highscore{0};
-
-
-
-reaction_time reaction;
+stats_struct stats;
+unsigned int stats_address{0};
 
 uint32_t on_time, off_time;
 
@@ -59,9 +54,10 @@ void set_onoff_times(unsigned int diff);
 void show_on_screen();
 void show_off_screen();
 
-void update_average_reaction_time(uint32_t time, unsigned int score);
+void update_average_reaction_time(uint32_t time, uint32_t score);
 void show_average_reaction_time();
 void sleep();
+boolean clean_delay(uint32_t ms);
 
 public:
 
