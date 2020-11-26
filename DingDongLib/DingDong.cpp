@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 22-11-2020  23:12:18
+ * @Last modified time: 24-11-2020  17:10:02
  */
 #include "DingDong.h"
 
@@ -87,7 +87,7 @@ int DingDong::getDifficulty()
                 if(button_is_pressed())
                 {
                         difficulty++;
-                        if(difficulty > 4)    //"rolls over" at 5
+                        if(difficulty > 6)    //"rolls over" at 7
                         {
                                 difficulty = 1;
                         }
@@ -96,9 +96,11 @@ int DingDong::getDifficulty()
                         case 1: set_green(); break;
                         case 2: set_yellow(); break;
                         case 3: set_red(); break;
-                        case 4: set_green(); set_yellow(); set_red(); break;
+                        case 4: set_green();  break;
+                        case 5: set_green(); set_yellow(); break;
+                        case 6: set_green(); set_yellow(); set_red(); break;
                         }
-                        keep_running = wait_on_button_Release(); // wait as long as button is pressed
+                        keep_running = wait_on_button_Release();
                         timestamp = millis();
                 }
         }
@@ -113,10 +115,10 @@ void DingDong::game(int difficulty)
                 uint32_t general_timestamp = millis(); // get the timestamp for the 45s general routine
                 uint32_t score = 0;
 
-                if(difficulty == 4) // difficulty 4 = show the Highscore and set difficulty to 3
+                if(difficulty >= 4) // difficulty 4 = show the Highscore and set difficulty to 3
                 {
-                        show_highscore();
-                        difficulty = 3;
+                        difficulty -= 3;
+                        show_highscore(difficulty);
                 }
 
                 set_onoff_times(difficulty); // set the on/off times
@@ -234,14 +236,16 @@ void DingDong::set_onoff_times(unsigned int difficulty)
 
 void DingDong::show_score(unsigned int score, unsigned int difficulty)
 {
-        if(difficulty == 3) // if difficulty is 'hard' -> check for Highscore.
+        boolean highscore = false;
+        switch(difficulty)
         {
-                if(score > stats.highscore)
-                {
-                        //save highscore to EEPROM
-                        stats.highscore = score;
-                        EEPROM.put(stats_address, stats);
-                }
+        case 1: if(score > stats.highscore_easy) {stats.highscore_easy = score; highscore = true;} break;
+        case 2: if(score > stats.highscore_medium) {stats.highscore_medium = score; highscore = true;} break;
+        case 3: if(score > stats.highscore_hard) {stats.highscore_hard = score; highscore = true;} break;
+        }
+        if(highscore)
+        {
+                EEPROM.put(stats_address, stats);
         }
         int button_is_pressed_counter = 0;
         int score_on_delay = 350;
@@ -270,12 +274,17 @@ void DingDong::show_score(unsigned int score, unsigned int difficulty)
         }
 }
 
-void DingDong::show_highscore()
+void DingDong::show_highscore(int difficulty)
 {
         // i don't think comments are necessary here.
         leds_off();
         delay(400);
-        show_score(stats.highscore, 0); // 0 just to fufill the requirements of the function show_score
+        switch(difficulty)
+        {
+        case 1: show_score(stats.highscore_easy, 1); break;
+        case 2: show_score(stats.highscore_medium, 2); break;
+        case 3: show_score(stats.highscore_hard, 3); break;
+        }
 }
 
 int DingDong::get_random_led() // returns 1, 2 or 3 as led_id
@@ -317,6 +326,26 @@ void DingDong::set_red()    // red on
         digitalWrite(red, HIGH);
 }
 
+void DingDong::dim_led(int led, int dly, boolean up)
+{
+        if(up)
+        {
+                for(int i = 0; i < 255; i++)
+                {
+                        analogWrite(led, i);
+                        delay(dly);
+                }
+                digitalWrite(led, HIGH);
+        }else{
+                for(int i = 0; i < 255; i++)
+                {
+                        analogWrite(led, i);
+                        delay(dly);
+                }
+                digitalWrite(led, LOW);
+        }
+}
+
 void DingDong::resetEEPROM()
 {
         /*
@@ -327,7 +356,9 @@ void DingDong::resetEEPROM()
         stats_struct tmp_stats;
         tmp_stats.counter = 1;
         tmp_stats.average_reaction_time = 200.0f;
-        tmp_stats.highscore = 0;
+        tmp_stats.highscore_easy = 0;
+        tmp_stats.highscore_medium = 0;
+        tmp_stats.highscore_hard = 0;
         EEPROM.put(stats_address, tmp_stats);
 
 
@@ -347,17 +378,7 @@ void DingDong::resetEEPROM()
 
 void DingDong::show_on_screen()
 {
-
-        for(int i = 0; i < 255; i++)
-        {
-                analogWrite(green, i);
-                delay(1);
-        }
-
-        set_green();
-
-
-
+        dim_led(green, 1, UP);
 }
 
 void DingDong::show_off_screen()

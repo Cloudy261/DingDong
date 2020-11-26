@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.h
  * @Last modified by:   claudi
- * @Last modified time: 22-11-2020  23:06:30
+ * @Last modified time: 24-11-2020  16:14:55
  */
 
 #include "Arduino.h"
@@ -15,11 +15,15 @@
 #include <EEPROM.h>
 
 #define BUTTON_TURN_OFF_TIME 3000 //ms
+#define UP 1
+#define DOWN 0
 
 struct stats_struct {
         float average_reaction_time;
         uint32_t counter;
-        unsigned int highscore;
+        unsigned int highscore_easy;
+        unsigned int highscore_medium;
+        unsigned int highscore_hard;
 };
 
 class DingDong
@@ -41,9 +45,9 @@ boolean wait_on_button_Release();
 void set_red();
 void set_yellow();
 void set_green();
-
+void dim_led(int led, int dly, boolean up);
 boolean button_is_pressed();
-void show_highscore();
+void show_highscore(int difficulty);
 int getDifficulty();
 void game(int diff);
 int get_random_led();

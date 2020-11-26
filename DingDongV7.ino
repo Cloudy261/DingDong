@@ -2,7 +2,7 @@
 
 EMPTY_INTERRUPT(PCINT0_vect);
 
-  DingDong dd;
+ DingDong dd;
 
 void setup() {
     dd.setup();
