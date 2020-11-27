@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 24-11-2020  17:10:02
+ * @Last modified time: 27-11-2020  10:49:13
  */
 #include "DingDong.h"
 
@@ -144,10 +144,7 @@ void DingDong::game(int difficulty)
                                         if(led_id == 2) // got the yellow one !
                                         {
                                                 score++;
-                                                if(difficulty == 3)
-                                                {
-                                                        reactiontime += (millis() - timestamp);
-                                                }
+                                                reactiontime += (millis() - timestamp);
                                                 if(score < 10)
                                                 {
                                                         //Times get shorter / Game becomes faster
@@ -337,7 +334,7 @@ void DingDong::dim_led(int led, int dly, boolean up)
                 }
                 digitalWrite(led, HIGH);
         }else{
-                for(int i = 0; i < 255; i++)
+                for(int i = 255; i > 0; i--)
                 {
                         analogWrite(led, i);
                         delay(dly);
@@ -358,18 +355,18 @@ void DingDong::resetEEPROM()
         tmp_stats.average_reaction_time = 200.0f;
         tmp_stats.highscore_easy = 0;
         tmp_stats.highscore_medium = 0;
-        tmp_stats.highscore_hard = 0;
+        tmp_stats.highscore_hard = 10;
         EEPROM.put(stats_address, tmp_stats);
 
 
         show_average_reaction_time();
         while(1)
         {
-                set_red();
+                set_yellow();
                 delay(100);
                 leds_off();
                 delay(100);
-                set_red();
+                set_yellow();
                 delay(100);
                 leds_off();
                 delay(1000);
@@ -378,7 +375,24 @@ void DingDong::resetEEPROM()
 
 void DingDong::show_on_screen()
 {
+
+
         dim_led(green, 1, UP);
+        delay(250);
+        set_yellow();
+        delay(500);
+        set_red();
+        delay(500);
+        digitalWrite(red,LOW);
+        delay(500);
+        digitalWrite(yellow, LOW);
+        delay(500);
+        dim_led(green, 1, DOWN);
+        delay(250);
+
+        set_green();
+
+
 }
 
 void DingDong::show_off_screen()
