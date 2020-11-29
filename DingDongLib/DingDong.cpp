@@ -4,13 +4,14 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 27-11-2020  10:49:13
+ * @Last modified time: 29-11-2020  18:14:22
  */
 #include "DingDong.h"
 
 void DingDong::routine() //main fuction
 {
         keep_running = true;
+        setup();
         show_on_screen();
         int difficulty = getDifficulty();
         game(difficulty);
@@ -110,17 +111,16 @@ int DingDong::getDifficulty()
 
 void DingDong::game(int difficulty)
 {
+        uint32_t general_timestamp = millis(); // get the timestamp for the 45s general routine
+        uint32_t score = 0;
+
+        if(difficulty >= 4) // difficulty 4 = show the Highscore and set difficulty to 3
+        {
+                difficulty -= 3;
+                show_highscore(difficulty);
+        }
         if(keep_running)
         {
-                uint32_t general_timestamp = millis(); // get the timestamp for the 45s general routine
-                uint32_t score = 0;
-
-                if(difficulty >= 4) // difficulty 4 = show the Highscore and set difficulty to 3
-                {
-                        difficulty -= 3;
-                        show_highscore(difficulty);
-                }
-
                 set_onoff_times(difficulty); // set the on/off times
 
                 randomSeed(millis()); // random Seed just to add a unique random experience
@@ -215,6 +215,7 @@ void DingDong::game(int difficulty)
 
                 }
         }
+        save_to_EEPROM(score, difficulty);
 }
 
 void DingDong::set_onoff_times(unsigned int difficulty)
@@ -231,7 +232,7 @@ void DingDong::set_onoff_times(unsigned int difficulty)
         }
 }
 
-void DingDong::show_score(unsigned int score, unsigned int difficulty)
+void DingDong::save_to_EEPROM(unsigned int score, unsigned int difficulty)
 {
         boolean highscore = false;
         switch(difficulty)
@@ -244,6 +245,11 @@ void DingDong::show_score(unsigned int score, unsigned int difficulty)
         {
                 EEPROM.put(stats_address, stats);
         }
+}
+
+void DingDong::show_score(unsigned int score, unsigned int difficulty)
+{
+        save_to_EEPROM(score, difficulty);
         int button_is_pressed_counter = 0;
         int score_on_delay = 350;
         int score_off_delay = 300;
@@ -346,7 +352,7 @@ void DingDong::dim_led(int led, int dly, boolean up)
 void DingDong::resetEEPROM()
 {
         /*
-           This step is obligatory ONCE. This sets the Highscore to 0
+           This step is obligatory ONCE. This sets the Highscores to 0
            as i had problems with my highscore being some random number in the
            EEPROM. I want every DingDong to have the Highscore 0 in the beginning.
          */
@@ -355,7 +361,7 @@ void DingDong::resetEEPROM()
         tmp_stats.average_reaction_time = 200.0f;
         tmp_stats.highscore_easy = 0;
         tmp_stats.highscore_medium = 0;
-        tmp_stats.highscore_hard = 10;
+        tmp_stats.highscore_hard = 0;
         EEPROM.put(stats_address, tmp_stats);
 
 
@@ -376,21 +382,65 @@ void DingDong::resetEEPROM()
 void DingDong::show_on_screen()
 {
 
+/*
+   Phil
+              dim_led(green, 1, UP);
+              delay(250);
+              set_yellow();
+              delay(500);
+              set_red();
+              delay(500);
+              digitalWrite(red,LOW);
+              delay(500);
+              digitalWrite(yellow, LOW);
+              delay(500);
+              dim_led(green, 1, DOWN);
+              delay(250);
+   JAYB
+
+               set_green();
+               delay(100);
+               leds_off();
+               delay(100);
+               set_green();
+               delay(100);
+               leds_off();
+               delay(100);
+               set_green();
+               delay(100);
+               leds_off();
+               delay(300);
+
+               set_yellow();
+               delay(300);
+               leds_off();
+               delay(300);
+               set_yellow();
+               delay(300);
+               leds_off();
+               delay(300);
+               set_yellow();
+               delay(300);
+               leds_off();
+               delay(300);
+
+               set_green();
+               delay(100);
+               leds_off();
+               delay(100);
+               set_green();
+               delay(100);
+               leds_off();
+               delay(100);
+               set_green();
+               delay(100);
+               leds_off();
+               delay(300);
+ */
+
+        //RETRO
 
         dim_led(green, 1, UP);
-        delay(250);
-        set_yellow();
-        delay(500);
-        set_red();
-        delay(500);
-        digitalWrite(red,LOW);
-        delay(500);
-        digitalWrite(yellow, LOW);
-        delay(500);
-        dim_led(green, 1, DOWN);
-        delay(250);
-
-        set_green();
 
 
 }

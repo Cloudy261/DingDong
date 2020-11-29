@@ -5,7 +5,6 @@ EMPTY_INTERRUPT(PCINT0_vect);
  DingDong dd;
 
 void setup() {
-    dd.setup();
     //dd.resetEEPROM();
 }
 

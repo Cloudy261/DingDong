@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.h
  * @Last modified by:   claudi
- * @Last modified time: 24-11-2020  16:14:55
+ * @Last modified time: 29-11-2020  17:55:29
  */
 
 #include "Arduino.h"
@@ -54,6 +54,7 @@ int get_random_led();
 
 void show_score(unsigned int score, unsigned int difficulty);
 void set_onoff_times(unsigned int diff);
+void save_to_EEPROM(unsigned int score, unsigned int difficulty);
 
 void show_on_screen();
 void show_off_screen();
