@@ -4,7 +4,7 @@
  * @Email:  claudiuslaves@gmx.de
  * @Filename: DingDong.cpp
  * @Last modified by:   claudi
- * @Last modified time: 29-11-2020  18:14:22
+ * @Last modified time: 03-12-2020  12:51:56
  */
 #include "DingDong.h"
 
@@ -31,7 +31,10 @@ void DingDong::setup()
          */
         red = 0;
         green = 1;
-        yellow = 2;
+
+        yellow = 2;    //Version 7
+        //yellow = 4;  //Version 7.1
+
         button = 3;
         pinMode(red, OUTPUT);
         pinMode(yellow, OUTPUT);
@@ -249,44 +252,57 @@ void DingDong::save_to_EEPROM(unsigned int score, unsigned int difficulty)
 
 void DingDong::show_score(unsigned int score, unsigned int difficulty)
 {
-        save_to_EEPROM(score, difficulty);
-        int button_is_pressed_counter = 0;
-        int score_on_delay = 350;
-        int score_off_delay = 300;
-        for(unsigned int i = 0; i < score; i++) // blink all leds score-times
-        {
-                set_green();
-                set_yellow();
-                set_red();
-                delay(score_on_delay);
-                leds_off();
-                delay(score_off_delay);
-                if(button_is_pressed())
-                {
-                        button_is_pressed_counter++;
-                        if(button_is_pressed_counter * (score_on_delay + score_off_delay) > BUTTON_TURN_OFF_TIME)
-                        {
-                                keep_running = false;
-                                break;
-                        }
-                }
-        }
         if(keep_running)
         {
-                keep_running = clean_delay(1500);
+                save_to_EEPROM(score, difficulty);
+                int button_is_pressed_counter = 0;
+                int score_on_delay, score_off_delay;
+                if(score <= 20)
+                {
+                        score_on_delay = 300;
+                        score_off_delay = 250;
+                }else{
+                        score_on_delay = 250;
+                        score_off_delay = 200;
+                }
+                for(unsigned int i = 0; i < score; i++) // blink all leds score-times
+                {
+                        set_green();
+                        set_yellow();
+                        set_red();
+                        delay(score_on_delay);
+                        leds_off();
+                        delay(score_off_delay);
+                        if(button_is_pressed())
+                        {
+                                button_is_pressed_counter++;
+                                if(button_is_pressed_counter * (score_on_delay + score_off_delay) > BUTTON_TURN_OFF_TIME)
+                                {
+                                        keep_running = false;
+                                        break;
+                                }
+                        }
+                }
+                if(keep_running)
+                {
+                        keep_running = clean_delay(1500);
+                }
         }
 }
 
 void DingDong::show_highscore(int difficulty)
 {
-        // i don't think comments are necessary here.
-        leds_off();
-        delay(400);
-        switch(difficulty)
+        if(keep_running)
         {
-        case 1: show_score(stats.highscore_easy, 1); break;
-        case 2: show_score(stats.highscore_medium, 2); break;
-        case 3: show_score(stats.highscore_hard, 3); break;
+                // i don't think comments are necessary here.
+                leds_off();
+                delay(400);
+                switch(difficulty)
+                {
+                case 1: show_score(stats.highscore_easy, 1); break;
+                case 2: show_score(stats.highscore_medium, 2); break;
+                case 3: show_score(stats.highscore_hard, 3); break;
+                }
         }
 }
 
@@ -362,10 +378,11 @@ void DingDong::resetEEPROM()
         tmp_stats.highscore_easy = 0;
         tmp_stats.highscore_medium = 0;
         tmp_stats.highscore_hard = 0;
-        EEPROM.put(stats_address, tmp_stats);
+        stats = tmp_stats;
+        EEPROM.put(stats_address, stats);
 
 
-        show_average_reaction_time();
+        //show_average_reaction_time();
         while(1)
         {
                 set_yellow();
@@ -398,44 +415,44 @@ void DingDong::show_on_screen()
               delay(250);
    JAYB
 
-               set_green();
-               delay(100);
-               leds_off();
-               delay(100);
-               set_green();
-               delay(100);
-               leds_off();
-               delay(100);
-               set_green();
-               delay(100);
-               leds_off();
-               delay(300);
+        set_green();
+        delay(100);
+        leds_off();
+        delay(100);
+        set_green();
+        delay(100);
+        leds_off();
+        delay(100);
+        set_green();
+        delay(100);
+        leds_off();
+        delay(300);
 
-               set_yellow();
-               delay(300);
-               leds_off();
-               delay(300);
-               set_yellow();
-               delay(300);
-               leds_off();
-               delay(300);
-               set_yellow();
-               delay(300);
-               leds_off();
-               delay(300);
+        set_yellow();
+        delay(300);
+        leds_off();
+        delay(300);
+        set_yellow();
+        delay(300);
+        leds_off();
+        delay(300);
+        set_yellow();
+        delay(300);
+        leds_off();
+        delay(300);
 
-               set_green();
-               delay(100);
-               leds_off();
-               delay(100);
-               set_green();
-               delay(100);
-               leds_off();
-               delay(100);
-               set_green();
-               delay(100);
-               leds_off();
-               delay(300);
+        set_red();
+        delay(100);
+        leds_off();
+        delay(100);
+        set_red();
+        delay(100);
+        leds_off();
+        delay(100);
+        set_red();
+        delay(100);
+        leds_off();
+        delay(300);
  */
 
         //RETRO
